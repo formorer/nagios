@@ -75,9 +75,6 @@ extern int      time_change_threshold;
 
 squeue_t *nagios_squeue = NULL; /* our scheduling queue */
 
-extern host     *host_list;
-extern service  *service_list;
-
 sched_info scheduling_info;
 extern iobroker_set *nagios_iobs;
 
@@ -90,8 +87,7 @@ extern iobroker_set *nagios_iobs;
 
 /* initialize the event timing loop before we start monitoring */
 void init_timing_loop(void) {
-	host *temp_host = NULL;
-	service *temp_service = NULL;
+	unsigned int i;
 	time_t current_time = 0L;
 	int total_interleave_blocks = 0;
 	int current_interleave_block = 1;
@@ -128,7 +124,8 @@ void init_timing_loop(void) {
 		gettimeofday(&tv[0], NULL);
 
 	/* get info on service checks to be scheduled */
-	for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+	for(i = 0; i < num_objects.services; i++) {
+		service *temp_service = &service_table[i];
 
 		schedule_check = TRUE;
 
@@ -171,7 +168,8 @@ void init_timing_loop(void) {
 		gettimeofday(&tv[1], NULL);
 
 	/* get info on host checks to be scheduled */
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		schedule_check = TRUE;
 
@@ -318,11 +316,12 @@ void init_timing_loop(void) {
 
 	/* determine check times for service checks (with interleaving to minimize remote load) */
 	current_interleave_block = 0;
-	for(temp_service = service_list; temp_service != NULL && scheduling_info.service_interleave_factor > 0;) {
+	for (i = 0; i < num_objects.services; i++) {
+		service *temp_service = &service_table[i];
 
 		log_debug_info(DEBUGL_EVENTS, 2, "Current Interleave Block: %d\n", current_interleave_block);
 
-		for(interleave_block_index = 0; interleave_block_index < scheduling_info.service_interleave_factor && temp_service != NULL; temp_service = temp_service->next) {
+		for(interleave_block_index = 0; interleave_block_index < scheduling_info.service_interleave_factor && temp_service != NULL; temp_service = &service_table[++i]) {
 			int check_delay = 0;
 
 			log_debug_info(DEBUGL_EVENTS, 2, "Service '%s' on host '%s'\n", temp_service->description, temp_service->host_name);
@@ -385,7 +384,8 @@ void init_timing_loop(void) {
 		gettimeofday(&tv[4], NULL);
 
 	/* add scheduled service checks to event queue */
-	for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+	for(i = 0; i < num_objects.services; i++) {
+		service *temp_service = &service_table[i];
 
 		/* Nagios XI/NDOUtils MOD */
 		/* update status of all services (scheduled or not) */
@@ -400,7 +400,7 @@ void init_timing_loop(void) {
 			}
 
 		/* create a new service check event */
-		schedule_new_event(EVENT_SERVICE_CHECK, FALSE, temp_service->next_check, FALSE, 0, NULL, TRUE, (void *)temp_service, NULL, temp_service->check_options);
+		temp_service->next_check_event = schedule_new_event(EVENT_SERVICE_CHECK, FALSE, temp_service->next_check, FALSE, 0, NULL, TRUE, (void *)temp_service, NULL, temp_service->check_options);
 		}
 
 
@@ -479,7 +479,8 @@ void init_timing_loop(void) {
 
 	/* determine check times for host checks */
 	mult_factor = 0;
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		log_debug_info(DEBUGL_EVENTS, 2, "Host '%s'\n", temp_host->name);
 
@@ -521,7 +522,8 @@ void init_timing_loop(void) {
 		gettimeofday(&tv[7], NULL);
 
 	/* add scheduled host checks to event queue */
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		/* Nagios XI/NDOUtils Mod */
 		/* update status of all hosts (scheduled or not) */
@@ -536,7 +538,7 @@ void init_timing_loop(void) {
 			}
 
 		/* schedule a new host check event */
-		schedule_new_event(EVENT_HOST_CHECK, FALSE, temp_host->next_check, FALSE, 0, NULL, TRUE, (void *)temp_host, NULL, temp_host->check_options);
+		temp_host->next_check_event = schedule_new_event(EVENT_HOST_CHECK, FALSE, temp_host->next_check, FALSE, 0, NULL, TRUE, (void *)temp_host, NULL, temp_host->check_options);
 		}
 
 	if(test_scheduling == TRUE)
@@ -1292,8 +1294,7 @@ static void adjust_squeue_for_time_change(squeue_t **q, int delta) {
 /* attempts to compensate for a change in the system time */
 void compensate_for_system_time_change(unsigned long last_time, unsigned long current_time) {
 	unsigned long time_difference = 0L;
-	service *temp_service = NULL;
-	host *temp_host = NULL;
+	unsigned int i;
 	int days = 0;
 	int hours = 0;
 	int minutes = 0;
@@ -1331,7 +1332,8 @@ void compensate_for_system_time_change(unsigned long last_time, unsigned long cu
 	adjust_squeue_for_time_change(&nagios_squeue, delta);
 
 	/* adjust service timestamps */
-	for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+	for(i = 0; i < num_objects.services; i++) {
+		service *temp_service = &service_table[i];
 
 		adjust_timestamp_for_time_change(last_time, current_time, time_difference, &temp_service->last_notification);
 		adjust_timestamp_for_time_change(last_time, current_time, time_difference, &temp_service->last_check);
@@ -1347,7 +1349,8 @@ void compensate_for_system_time_change(unsigned long last_time, unsigned long cu
 		}
 
 	/* adjust host timestamps */
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		adjust_timestamp_for_time_change(last_time, current_time, time_difference, &temp_host->last_host_notification);
 		adjust_timestamp_for_time_change(last_time, current_time, time_difference, &temp_host->last_check);

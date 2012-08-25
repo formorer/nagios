@@ -630,6 +630,7 @@ int grab_macrox_value_r(nagios_macros *mac, int macro_type, char *arg1, char *ar
 	int delimiter_len = 0;
 	int free_sub_macro = FALSE;
 #ifdef NSCORE
+	unsigned int i;
 	register int x;
 	int authorized = TRUE;
 	int problem = TRUE;
@@ -1109,7 +1110,8 @@ int grab_macrox_value_r(nagios_macros *mac, int macro_type, char *arg1, char *ar
 			if(mac->x[MACRO_TOTALHOSTSUP] == NULL) {
 
 				/* get host totals */
-				for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+				for(i = 0; i < num_objects.hosts; i++) {
+					host *temp_host = &host_table[i];
 
 					/* filter totals based on contact if necessary */
 					if(mac->contact_ptr != NULL)
@@ -1149,7 +1151,8 @@ int grab_macrox_value_r(nagios_macros *mac, int macro_type, char *arg1, char *ar
 				host_problems_unhandled = hosts_down_unhandled + hosts_unreachable_unhandled;
 
 				/* get service totals */
-				for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+				for(i = 0; i < num_objects.services; i++) {
+					service *temp_service = &service_table[i];
 
 					/* filter totals based on contact if necessary */
 					if(mac->contact_ptr != NULL)

@@ -316,11 +316,9 @@ int xsddefault_cleanup_status_data(char *config_file, int delete_status_data) {
 
 /* write all status data to file */
 int xsddefault_save_status_data(void) {
+	unsigned int i;
 	char *temp_file = NULL;
 	customvariablesmember *temp_customvariablesmember = NULL;
-	host *temp_host = NULL;
-	service *temp_service = NULL;
-	contact *temp_contact = NULL;
 	comment *temp_comment = NULL;
 	scheduled_downtime *temp_downtime = NULL;
 	time_t current_time;
@@ -431,7 +429,8 @@ int xsddefault_save_status_data(void) {
 
 
 	/* save host status data */
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		fprintf(fp, "hoststatus {\n");
 		fprintf(fp, "\thost_name=%s\n", temp_host->name);
@@ -497,7 +496,8 @@ int xsddefault_save_status_data(void) {
 		}
 
 	/* save service status data */
-	for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+	for(i = 0; i < num_objects.services; i++) {
+		service *temp_service = &service_table[i];
 
 		fprintf(fp, "servicestatus {\n");
 		fprintf(fp, "\thost_name=%s\n", temp_service->host_name);
@@ -565,7 +565,8 @@ int xsddefault_save_status_data(void) {
 		}
 
 	/* save contact status data */
-	for(temp_contact = contact_list; temp_contact != NULL; temp_contact = temp_contact->next) {
+	for(i = 0; i < num_objects.contacts; i++) {
+		contact *temp_contact = &contact_table[i];
 
 		fprintf(fp, "contactstatus {\n");
 		fprintf(fp, "\tcontact_name=%s\n", temp_contact->name);

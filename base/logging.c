@@ -300,14 +300,15 @@ int log_host_event(host *hst) {
 
 /* logs host states */
 int log_host_states(int type, time_t *timestamp) {
+	unsigned int i;
 	char *temp_buffer = NULL;
-	host *temp_host = NULL;;
 
 	/* bail if we shouldn't be logging initial states */
 	if(type == INITIAL_STATES && log_initial_states == FALSE)
 		return OK;
 
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		asprintf(&temp_buffer, "%s HOST STATE: %s;%s;%s;%d;%s\n", (type == INITIAL_STATES) ? "INITIAL" : "CURRENT",
 				 temp_host->name,
@@ -327,15 +328,16 @@ int log_host_states(int type, time_t *timestamp) {
 
 /* logs service states */
 int log_service_states(int type, time_t *timestamp) {
-	char *temp_buffer = NULL;
-	service *temp_service = NULL;
-	host *temp_host = NULL;;
+	unsigned int i;
 
 	/* bail if we shouldn't be logging initial states */
 	if(type == INITIAL_STATES && log_initial_states == FALSE)
 		return OK;
 
-	for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+	for(i = 0; i < num_objects.services; i++) {
+		host *temp_host;
+		service *temp_service = &service_table[i];
+		char *temp_buffer;
 
 		/* find the associated host */
 		if((temp_host = temp_service->host_ptr) == NULL)

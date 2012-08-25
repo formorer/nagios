@@ -64,14 +64,15 @@ extern service  *service_list;
 /*** stupid helpers ****/
 static host *find_host_by_name_or_address(const char *name)
 {
-	host *h;
+	host *h = NULL;
+	unsigned int i;
 
-	if ((h = find_host(name)) || !name)
+	if (!name || !(h = find_host(name)))
 		return h;
 
-	for (h = host_list; h; h = h->next)
-		if (!strcmp(h->address, name))
-			return h;
+	for (i = 0; i < num_objects.hosts; i++) {
+		if (!strcmp(host_table[i].address, name))
+			return &host_table[i];
 
 	return NULL;
 }

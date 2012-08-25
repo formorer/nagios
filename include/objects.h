@@ -46,6 +46,7 @@ NAGIOS_BEGIN_DECL
 /***************** SKIP LISTS ****************/
 
 #define NUM_OBJECT_SKIPLISTS                   12
+#define NUM_HASHED_OBJECT_TYPES                8
 
 #define HOST_SKIPLIST                          0
 #define SERVICE_SKIPLIST                       1
@@ -117,7 +118,7 @@ typedef struct timeperiod_struct {
 	timerange *days[7];
 	daterange *exceptions[DATERANGE_TYPES];
 	timeperiodexclusion *exclusions;
-	struct 	timeperiod_struct *next;
+	struct timeperiod_struct *next;
 	} timeperiod;
 
 
@@ -137,7 +138,7 @@ typedef struct contactgroup_struct {
 	char	*group_name;
 	char    *alias;
 	contactsmember *members;
-	struct	contactgroup_struct *next;
+	struct contactgroup_struct *next;
 	} contactgroup;
 
 
@@ -165,7 +166,9 @@ typedef struct command_struct {
 	unsigned int id;
 	char    *name;
 	char    *command_line;
+#ifdef NSCORE
 	struct command_struct *next;
+#endif
 	} command;
 
 
@@ -219,7 +222,7 @@ struct contact_struct {
 	timeperiod *service_notification_period_ptr;
 	objectlist *contactgroups_ptr;
 #endif
-	struct	contact_struct *next;
+	struct contact_struct *next;
 	};
 
 
@@ -253,7 +256,7 @@ typedef struct hostgroup_struct {
 	char    *notes;
 	char    *notes_url;
 	char    *action_url;
-	struct	hostgroup_struct *next;
+	struct hostgroup_struct *next;
 	} hostgroup;
 
 
@@ -376,12 +379,11 @@ struct host_struct {
 	timeperiod *check_period_ptr;
 	timeperiod *notification_period_ptr;
 	objectlist *hostgroups_ptr;
+	void *next_check_event;
 #endif
-	/* objects we depend upon */
 	objectlist *exec_deps, *notify_deps;
 	objectlist *escalation_list;
-	struct  host_struct *next;
-	void *next_check_event;
+	struct host_struct *next;
 	};
 
 
@@ -394,7 +396,7 @@ typedef struct servicegroup_struct {
 	char    *notes;
 	char    *notes_url;
 	char    *action_url;
-	struct	servicegroup_struct *next;
+	struct servicegroup_struct *next;
 	} servicegroup;
 
 
@@ -511,11 +513,11 @@ struct service_struct {
 	timeperiod *check_period_ptr;
 	timeperiod *notification_period_ptr;
 	objectlist *servicegroups_ptr;
+	void *next_check_event;
 #endif
 	objectlist *exec_deps, *notify_deps;
 	objectlist *escalation_list;
 	struct service_struct *next;
-	void *next_check_event;
 	};
 
 
@@ -538,7 +540,7 @@ typedef struct serviceescalation_struct {
 	service *service_ptr;
 	timeperiod *escalation_period_ptr;
 #endif
-	struct  serviceescalation_struct *next;
+	struct serviceescalation_struct *next;
 	} serviceescalation;
 
 
@@ -583,7 +585,7 @@ typedef struct hostescalation_struct {
 	host    *host_ptr;
 	timeperiod *escalation_period_ptr;
 #endif
-	struct  hostescalation_struct *next;
+	struct hostescalation_struct *next;
 	} hostescalation;
 
 
@@ -607,6 +609,32 @@ typedef struct hostdependency_struct {
 	struct hostdependency_struct *next;
 	} hostdependency;
 
+extern command *command_table;
+extern timeperiod *timeperiod_table;
+extern host *host_table;
+extern service *service_table;
+extern contact *contact_table;
+extern hostgroup *hostgroup_table;
+extern servicegroup *servicegroup_table;
+extern contactgroup *contactgroup_table;
+extern hostescalation *hostescalation_table;
+extern hostdependency *hostdependency_table;
+extern serviceescalation *serviceescalation_table;
+extern servicedependency *servicedependency_table;
+#ifdef NSCGI
+# define command_list command_table
+# define timeperiod_list timeperiod_table;
+# define host_list host_table;
+# define service_list service_table;
+# define contact_list contact_table;
+# define hostgroup_list hostgroup_table;
+# define servicegroup_list servicegroup_table;
+# define contactgroup_list contactgroup_table;
+# define hostescalation_list hostescalation_table;
+# define hostdependency_list hostdependency_table;
+# define serviceescalation_list serviceescalation_table;
+# define servicedependency_list servicedependency_table;
+#endif
 
 
 /********************* FUNCTIONS **********************/
@@ -658,38 +686,22 @@ customvariablesmember *add_custom_variable_to_object(customvariablesmember **, c
 servicesmember *add_service_link_to_host(host *, service *);
 
 
-/*** Object Skiplist Functions ****/
-int init_object_skiplists(void);
-int free_object_skiplists(void);
 int skiplist_compare_text(const char *val1a, const char *val1b, const char *val2a, const char *val2b);
-int skiplist_compare_host(void *a, void *b);
-int skiplist_compare_service(void *a, void *b);
-int skiplist_compare_command(void *a, void *b);
-int skiplist_compare_timeperiod(void *a, void *b);
-int skiplist_compare_contact(void *a, void *b);
-int skiplist_compare_contactgroup(void *a, void *b);
-int skiplist_compare_hostgroup(void *a, void *b);
-int skiplist_compare_servicegroup(void *a, void *b);
-int skiplist_compare_hostescalation(void *a, void *b);
-int skiplist_compare_serviceescalation(void *a, void *b);
-int skiplist_compare_hostdependency(void *a, void *b);
-int skiplist_compare_servicedependency(void *a, void *b);
-
 int get_host_count(void);
 int get_service_count(void);
 
 
+int create_object_tables(unsigned int *);
 
 /**** Object Search Functions ****/
-timeperiod *find_timeperiod(char *);						                /* finds a timeperiod object */
-host *find_host(char *);									/* finds a host object */
-hostgroup *find_hostgroup(char *);						                /* finds a hostgroup object */
-servicegroup *find_servicegroup(char *);					                /* finds a servicegroup object */
-contact *find_contact(char *);							                /* finds a contact object */
-contactgroup *find_contactgroup(char *);					                /* finds a contactgroup object */
-command *find_command(char *);							                /* finds a command object */
-service *find_service(char *, char *);								/* finds a service object */
-
+timeperiod *find_timeperiod(const char *);						                /* finds a timeperiod object */
+host *find_host(const char *);									/* finds a host object */
+hostgroup *find_hostgroup(const char *);						                /* finds a hostgroup object */
+servicegroup *find_servicegroup(const char *);					                /* finds a servicegroup object */
+contact *find_contact(const char *);							                /* finds a contact object */
+contactgroup *find_contactgroup(const char *);					                /* finds a contactgroup object */
+command *find_command(const char *);							                /* finds a command object */
+service *find_service(const char *, const char *);								/* finds a service object */
 
 
 int add_object_to_objectlist(objectlist **, void *);

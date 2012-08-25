@@ -82,11 +82,6 @@ extern time_t   event_start;
 
 extern squeue_t *nagios_squeue;
 
-extern host              *host_list;
-extern service           *service_list;
-extern servicedependency *servicedependency_list;
-extern hostdependency    *hostdependency_list;
-
 extern unsigned long   next_event_id;
 extern unsigned long   next_problem_id;
 
@@ -1389,7 +1384,7 @@ int check_service_dependencies(service *svc, int dependency_type) {
 
 /* check for services that never returned from a check... */
 void check_for_orphaned_services(void) {
-	service *temp_service = NULL;
+	unsigned int i;
 	time_t current_time = 0L;
 	time_t expected_time = 0L;
 
@@ -1400,7 +1395,8 @@ void check_for_orphaned_services(void) {
 	time(&current_time);
 
 	/* check all services... */
-	for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+	for(i = 0; i < num_objects.services; i++) {
+		service *temp_service = &service_table[i];
 
 		/* skip services that are not currently executing */
 		if(temp_service->is_executing == FALSE)
@@ -1437,7 +1433,7 @@ void check_for_orphaned_services(void) {
 
 /* check freshness of service results */
 void check_service_result_freshness(void) {
-	service *temp_service = NULL;
+	unsigned int i;
 	time_t current_time = 0L;
 
 
@@ -1454,7 +1450,8 @@ void check_service_result_freshness(void) {
 	time(&current_time);
 
 	/* check all services... */
-	for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+	for(i = 0; i < num_objects.services; i++) {
+		service *temp_service = &service_table[i];
 
 		/* skip services we shouldn't be checking for freshness */
 		if(temp_service->check_freshness == FALSE)
@@ -1811,7 +1808,7 @@ int check_host_dependencies(host *hst, int dependency_type) {
 
 /* check for hosts that never returned from a check... */
 void check_for_orphaned_hosts(void) {
-	host *temp_host = NULL;
+	int i;
 	time_t current_time = 0L;
 	time_t expected_time = 0L;
 
@@ -1822,7 +1819,8 @@ void check_for_orphaned_hosts(void) {
 	time(&current_time);
 
 	/* check all hosts... */
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		/* skip hosts that don't have a set check interval (on-demand checks are missed by the orphan logic) */
 		if(temp_host->next_check == (time_t)0L)
@@ -1863,7 +1861,7 @@ void check_for_orphaned_hosts(void) {
 
 /* check freshness of host results */
 void check_host_result_freshness(void) {
-	host *temp_host = NULL;
+	int i;
 	time_t current_time = 0L;
 
 
@@ -1880,7 +1878,8 @@ void check_host_result_freshness(void) {
 	time(&current_time);
 
 	/* check all hosts... */
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		/* skip hosts we shouldn't be checking for freshness */
 		if(temp_host->check_freshness == FALSE)

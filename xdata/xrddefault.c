@@ -247,13 +247,11 @@ int xrddefault_save_state_information(void) {
 	time_t current_time = 0L;
 	int result = OK;
 	FILE *fp = NULL;
-	host *temp_host = NULL;
-	service *temp_service = NULL;
-	contact *temp_contact = NULL;
 	comment *temp_comment = NULL;
 	scheduled_downtime *temp_downtime = NULL;
 	int x = 0;
 	int fd = 0;
+	unsigned int i;
 	unsigned long host_attribute_mask = 0L;
 	unsigned long service_attribute_mask = 0L;
 	unsigned long contact_attribute_mask = 0L;
@@ -350,7 +348,8 @@ int xrddefault_save_state_information(void) {
 	fprintf(fp, "}\n");
 
 	/* save host state information */
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		fprintf(fp, "host {\n");
 		fprintf(fp, "host_name=%s\n", temp_host->name);
@@ -420,7 +419,8 @@ int xrddefault_save_state_information(void) {
 		}
 
 	/* save service state information */
-	for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
+	for(i = 0; i < num_objects.services; i++) {
+		service *temp_service = &service_table[i];
 
 		fprintf(fp, "service {\n");
 		fprintf(fp, "host_name=%s\n", temp_service->host_name);
@@ -493,7 +493,8 @@ int xrddefault_save_state_information(void) {
 		}
 
 	/* save contact state information */
-	for(temp_contact = contact_list; temp_contact != NULL; temp_contact = temp_contact->next) {
+	for(i = 0; i < num_objects.contacts; i++) {
+		contact *temp_contact = &contact_table[i];
 
 		fprintf(fp, "contact {\n");
 		fprintf(fp, "contact_name=%s\n", temp_contact->name);

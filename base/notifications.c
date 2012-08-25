@@ -31,8 +31,6 @@
 #include "../include/workers.h"
 
 extern notification    *notification_list;
-extern contact         *contact_list;
-
 extern time_t          program_start;
 
 extern int             interval_length;
@@ -49,14 +47,18 @@ extern char            *generic_summary;
 static contact *find_contact_by_name_or_alias(const char *name)
 {
 	contact *c = NULL;
+	unsigned int i;
 
 	if (!name || !(c = find_contact(name)))
 		return c;
-	for (c = contact_list; c; c = c->next)
-		if (!strcmp(c->alias, name))
-			break;
 
-	return c;
+	for (i = 0; i < num_objects.contacts; i++) {
+		c = &contact_table[i];
+		if (!strcmp(c->alias, name))
+			return c;
+	}
+
+	return NULL;
 }
 
 

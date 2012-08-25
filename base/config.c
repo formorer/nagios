@@ -178,22 +178,6 @@ extern int      child_processes_fork_twice;
 extern int      date_format;
 extern char     *use_timezone;
 
-extern contact		*contact_list;
-extern contactgroup	*contactgroup_list;
-extern host             *host_list;
-extern hostgroup	*hostgroup_list;
-extern service          *service_list;
-extern servicegroup     *servicegroup_list;
-extern command          *command_list;
-extern timeperiod       *timeperiod_list;
-extern serviceescalation *serviceescalation_list;
-extern servicedependency *servicedependency_list;
-extern hostdependency   *hostdependency_list;
-extern hostescalation   *hostescalation_list;
-
-extern host		**host_hashlist;
-extern service		**service_hashlist;
-
 extern unsigned long    max_check_result_file_age;
 
 extern char             *debug_file;
@@ -202,6 +186,7 @@ extern int              debug_verbosity;
 extern unsigned long    max_debug_file_size;
 
 extern int              allow_empty_hostgroup_assignment;
+
 
 /*** helpers ****/
 /*
@@ -1631,17 +1616,14 @@ int pre_flight_object_check(int *w, int *e) {
 	host *temp_host = NULL;
 	host *temp_host2 = NULL;
 	hostsmember *temp_hostsmember = NULL;
-	hostgroup *temp_hostgroup = NULL;
-	servicegroup *temp_servicegroup = NULL;
 	servicesmember *temp_servicesmember = NULL;
 	service *temp_service = NULL;
-	command *temp_command = NULL;
 	timeperiod *temp_timeperiod = NULL;
 	timeperiod *temp_timeperiod2 = NULL;
 	timeperiodexclusion *temp_timeperiodexclusion = NULL;
-	int total_objects = 0;
 	int warnings = 0;
 	int errors = 0;
+	unsigned int i;
 
 
 #ifdef TEST
@@ -1672,10 +1654,9 @@ int pre_flight_object_check(int *w, int *e) {
 		logit(NSLOG_VERIFICATION_ERROR, TRUE, "Error: There are no services defined!");
 		errors++;
 		}
-	total_objects = 0;
-	for(temp_service = service_list; temp_service != NULL; temp_service = temp_service->next) {
 
-		total_objects++;
+	for(i = 0; i < num_objects.services; i++) {
+		service *temp_service = &service_table[i];
 
 		/* check the event handler command */
 		if(temp_service->event_handler != NULL) {
@@ -1733,7 +1714,7 @@ int pre_flight_object_check(int *w, int *e) {
 		}
 
 	if(verify_config == TRUE)
-		printf("\tChecked %d services.\n", total_objects);
+		printf("\tChecked %u services.\n", num_objects.services);
 
 
 
@@ -1748,10 +1729,8 @@ int pre_flight_object_check(int *w, int *e) {
 		errors++;
 		}
 
-	total_objects = 0;
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
-
-		total_objects++;
+	for(i = 0; i < num_objects.hosts; i++) {
+		host *temp_host = &host_table[i];
 
 		/* make sure each host has at least one service associated with it */
 		if(temp_host->total_services == 0) {
@@ -1867,7 +1846,7 @@ int pre_flight_object_check(int *w, int *e) {
 
 
 	if(verify_config == TRUE)
-		printf("\tChecked %d hosts.\n", total_objects);
+		printf("\tChecked %u hosts.\n", num_objects.hosts);
 
 
 	/*****************************************/
@@ -1875,7 +1854,8 @@ int pre_flight_object_check(int *w, int *e) {
 	/*****************************************/
 	if(verify_config == TRUE)
 		printf("Checking host groups...\n");
-	for(temp_hostgroup = hostgroup_list, total_objects = 0; temp_hostgroup != NULL; temp_hostgroup = temp_hostgroup->next, total_objects++) {
+	for(i = 0; i < num_objects.hostgroups; i++) {
+		hostgroup *temp_hostgroup = &hostgroup_table[i];
 
 		/* check all group members */
 		for(temp_hostsmember = temp_hostgroup->members; temp_hostsmember != NULL; temp_hostsmember = temp_hostsmember->next) {
@@ -1904,7 +1884,7 @@ int pre_flight_object_check(int *w, int *e) {
 		}
 
 	if(verify_config == TRUE)
-		printf("\tChecked %d host groups.\n", total_objects);
+		printf("\tChecked %u host groups.\n", num_objects.hostgroups);
 
 
 	/*****************************************/
@@ -1912,7 +1892,8 @@ int pre_flight_object_check(int *w, int *e) {
 	/*****************************************/
 	if(verify_config == TRUE)
 		printf("Checking service groups...\n");
-	for(temp_servicegroup = servicegroup_list, total_objects = 0; temp_servicegroup != NULL; temp_servicegroup = temp_servicegroup->next, total_objects++) {
+	for(i = 0; i < num_objects.servicegroups; i++) {
+		servicegroup *temp_servicegroup = &servicegroup_table[i];
 
 		/* check all group members */
 		for(temp_servicesmember = temp_servicegroup->members; temp_servicesmember != NULL; temp_servicesmember = temp_servicesmember->next) {
@@ -1941,7 +1922,7 @@ int pre_flight_object_check(int *w, int *e) {
 		}
 
 	if(verify_config == TRUE)
-		printf("\tChecked %d service groups.\n", total_objects);
+		printf("\tChecked %u service groups.\n", num_objects.servicegroups);
 
 
 
@@ -1950,11 +1931,12 @@ int pre_flight_object_check(int *w, int *e) {
 	/*****************************************/
 	if(verify_config == TRUE)
 		printf("Checking contacts...\n");
-	if(contact_list == NULL) {
+	if(num_objects.contacts == 0) {
 		logit(NSLOG_VERIFICATION_ERROR, TRUE, "Error: There are no contacts defined!");
 		errors++;
 		}
-	for(temp_contact = contact_list, total_objects = 0; temp_contact != NULL; temp_contact = temp_contact->next, total_objects++) {
+	for(i = 0; i < num_objects.contacts; i++) {
+		contact *temp_contact = &contact_table[i];
 
 		/* check service notification commands */
 		if(temp_contact->service_notification_commands == NULL) {
@@ -1963,7 +1945,7 @@ int pre_flight_object_check(int *w, int *e) {
 			}
 		else for(temp_commandsmember = temp_contact->service_notification_commands; temp_commandsmember != NULL; temp_commandsmember = temp_commandsmember->next) {
 			temp_commandsmember->command_ptr = find_bang_command(temp_commandsmember->command);
-			if(temp_command == NULL) {
+			if(temp_commandsmember->command_ptr == NULL) {
 				logit(NSLOG_VERIFICATION_ERROR, TRUE, "Error: Service notification command '%s' specified for contact '%s' is not defined anywhere!", temp_commandsmember->command, temp_contact->name);
 				errors++;
 				}
@@ -1976,7 +1958,7 @@ int pre_flight_object_check(int *w, int *e) {
 			}
 		else for(temp_commandsmember = temp_contact->host_notification_commands; temp_commandsmember != NULL; temp_commandsmember = temp_commandsmember->next) {
 			temp_commandsmember->command_ptr = find_bang_command(temp_commandsmember->command);
-			if(temp_command == NULL) {
+			if(temp_commandsmember->command_ptr == NULL) {
 				logit(NSLOG_VERIFICATION_ERROR, TRUE, "Error: Host notification command '%s' specified for contact '%s' is not defined anywhere!", temp_commandsmember->command, temp_contact->name);
 				errors++;
 				}
@@ -2038,7 +2020,7 @@ int pre_flight_object_check(int *w, int *e) {
 		}
 
 	if(verify_config == TRUE)
-		printf("\tChecked %d contacts.\n", total_objects);
+		printf("\tChecked %u contacts.\n", num_objects.contacts);
 
 
 
@@ -2047,7 +2029,8 @@ int pre_flight_object_check(int *w, int *e) {
 	/*****************************************/
 	if(verify_config == TRUE)
 		printf("Checking contact groups...\n");
-	for(temp_contactgroup = contactgroup_list, total_objects = 0; temp_contactgroup != NULL; temp_contactgroup = temp_contactgroup->next, total_objects++) {
+	for(i = 0; i < num_objects.contactgroups; i++) {
+		contactgroup *temp_contactgroup = &contactgroup_table[i];
 
 		/* check all the group members */
 		for(temp_contactsmember = temp_contactgroup->members; temp_contactsmember != NULL; temp_contactsmember = temp_contactsmember->next) {
@@ -2076,29 +2059,27 @@ int pre_flight_object_check(int *w, int *e) {
 		}
 
 	if(verify_config == TRUE)
-		printf("\tChecked %d contact groups.\n", total_objects);
+		printf("\tChecked %u contact groups.\n", num_objects.contactgroups);
 
 
 	/*****************************************/
 	/* check all commands...                 */
 	/*****************************************/
-	if(verify_config == TRUE)
-		printf("Checking commands...\n");
+	if (use_precached_objects == FALSE) {
+		if(verify_config == TRUE)
+			printf("Checking commands...\n");
+		for(i = 0; i < num_objects.commands; i++) {
+			command *temp_command = &command_table[i];
 
-	for(temp_command = command_list, total_objects = 0; temp_command != NULL; temp_command = temp_command->next, total_objects++) {
-
-		/* check for illegal characters in command name */
-		if(use_precached_objects == FALSE) {
+			/* check for illegal characters in command name */
 			if(contains_illegal_object_chars(temp_command->name) == TRUE) {
 				logit(NSLOG_VERIFICATION_ERROR, TRUE, "Error: The name of command '%s' contains one or more illegal characters.", temp_command->name);
 				errors++;
 				}
 			}
+		if(verify_config == TRUE)
+			printf("\tChecked %u commands.\n", num_objects.commands);
 		}
-
-	if(verify_config == TRUE)
-		printf("\tChecked %d commands.\n", total_objects);
-
 
 
 	/*****************************************/
@@ -2107,7 +2088,8 @@ int pre_flight_object_check(int *w, int *e) {
 	if(verify_config == TRUE)
 		printf("Checking time periods...\n");
 
-	for(temp_timeperiod = timeperiod_list, total_objects = 0; temp_timeperiod != NULL; temp_timeperiod = temp_timeperiod->next, total_objects++) {
+	for (i = 0; i < num_objects.timeperiods; i++) {
+		temp_timeperiod = &timeperiod_table[i];
 
 		/* check for illegal characters in timeperiod name */
 		if(use_precached_objects == FALSE) {
@@ -2132,7 +2114,7 @@ int pre_flight_object_check(int *w, int *e) {
 		}
 
 	if(verify_config == TRUE)
-		printf("\tChecked %d time periods.\n", total_objects);
+		printf("\tChecked %u time periods.\n", num_objects.timeperiods);
 
 
 
@@ -2326,9 +2308,6 @@ static int dfs_host_path(char *ary, host *root, int *errors) {
 
 /* check for circular paths and dependencies */
 int pre_flight_circular_check(int *w, int *e) {
-	host *temp_host = NULL;
-	servicedependency *temp_sd = NULL;
-	hostdependency *temp_hd = NULL;
 	int i, errors = 0;
 	unsigned int alloc, dep_type;
 	char *ary[2];
@@ -2361,8 +2340,8 @@ int pre_flight_circular_check(int *w, int *e) {
 	if(verify_config == TRUE)
 		printf("Checking for circular paths between hosts...\n");
 
-	for(temp_host = host_list; temp_host != NULL; temp_host = temp_host->next) {
-		dfs_host_path(ary[0], temp_host, &errors);
+	for(i = 0; i < num_objects.hosts; i++) {
+		dfs_host_path(ary[0], &host_table[i], &errors);
 		}
 
 	/********************************************/
@@ -2375,7 +2354,8 @@ int pre_flight_circular_check(int *w, int *e) {
 	/* We must clean the dfs status from previous check */
 	for (i = 0; i < ARRAY_SIZE(ary); i++)
 		memset(ary[i], 0, alloc);
-	for(temp_sd = servicedependency_list; temp_sd != NULL; temp_sd = temp_sd->next) {
+	for(i = 0; i < num_objects.servicedependencies; i++) {
+		servicedependency *temp_sd = &servicedependency_table[i];
 		dep_type = temp_sd->dependency_type;
 		dfs_servicedep_path(ary[dep_type - 1], temp_sd->dependent_service_ptr, dep_type, &errors);
 		}
@@ -2383,7 +2363,8 @@ int pre_flight_circular_check(int *w, int *e) {
 	/* check host dependencies */
 	for (i = 0; i < ARRAY_SIZE(ary); i++)
 		memset(ary[i], 0, alloc);
-	for(temp_hd = hostdependency_list; temp_hd != NULL; temp_hd = temp_hd->next) {
+	for(i = 0; i < num_objects.hostdependencies; i++) {
+		hostdependency *temp_hd = &hostdependency_table[i];
 		dep_type = temp_hd->dependency_type;
 		dfs_hostdep_path(ary[dep_type - 1], temp_hd->dependent_host_ptr, dep_type, &errors);
 		}
